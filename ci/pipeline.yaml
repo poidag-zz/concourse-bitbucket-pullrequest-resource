@@ -1,0 +1,51 @@
+---
+resource_types:
+
+- name: pull-request
+  type: docker-image
+  source:
+    repository: quay.io/pickledrick/concourse-bitbucket-pullrequest-resource
+
+resources:
+
+- name: pull-request
+  type: pull-request
+  source:
+    key: ((key))
+    repo: test
+    secret: ((secret))
+    team: pickledrick
+    url: https://api.bitbucket.org
+    version: "2.0"
+    concourse_url: "http://example.com"
+
+jobs:
+
+- name: check-pull-request
+  plan:
+  - get: pull-request
+    trigger: true
+  - task: details
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: alpine}
+      inputs:
+        - name: pull-request
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          ls -ltr pull-request
+    on_failure:
+      put: pull-request
+      params:
+        commit: pull-request/commit
+        state: failed
+    on_success:
+      put: pull-request
+      params:
+        commit: pull-request/commit
+        state: success
